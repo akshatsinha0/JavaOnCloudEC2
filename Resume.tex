@@ -1,0 +1,154 @@
+% Compile with XeLaTeX or LuaLaTeX
+\documentclass[10pt]{article}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{ebgaramond}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fontawesome5}
+
+% Compact spacing
+\setlist[itemize]{nosep,leftmargin=*,itemsep=0pt,topsep=1pt,parsep=0pt,partopsep=0pt}
+\setlength{\parskip}{0.5pt}
+\setlength{\parindent}{0pt}
+\linespread{0.98}
+
+% Very light ivory background to match report
+\pagecolor{white!97.2!yellow}
+
+% Compact section heading
+\newcommand{\sectionrule}{\vspace{3pt}\hrule height 0.5pt \vspace{4pt}}
+\newcommand{\ressection}[1]{\vspace{1pt}\textbf{#1}\sectionrule}
+% Non-bold section variant for specific sections
+\newcommand{\ressectionplain}[1]{\vspace{1pt}#1\sectionrule}
+
+\newcommand{\sep}{\,|\,}
+
+\begin{document}
+
+% ===================== Header =====================
+\begin{center}
+{\Large\bfseries AKSHAT SINHA}\\[-1pt]
+Beginner Front-end Developer
+\end{center}
+\centering
+\normalsize
+\faMapMarker*\, Vellore, Tamil Nadu \sep \faPhone\, +91 9142812513 \sep \faEnvelope\, \href{mailto:akshat.sinha2022@vitstudent.ac.in}{akshat.sinha2022@vitstudent.ac.in} \sep
+\faCode\, \href{https://leetcode.com/u/akshatsinha0/}{LeetCode} \sep \faGithub\, \href{https://github.com/akshatsinha0}{GitHub} \sep
+\faLinkedin\, \href{https://www.linkedin.com/in/akshat-sinha-248805214}{LinkedIn} \sep \faTrophy\, \href{https://codeforces.com/profile/akshatsinhasramhardy}{Codeforces}\\[5pt]
+\raggedright
+Enthusiast for coding in Java. A good knowledge of math, DSA, Software Development \& Project Management.
+
+% ===================== Education =====================
+\ressection{EDUCATION}
+\textbf{Vellore Institute of Technology}, Vellore Campus, Tamil Nadu \hfill \faCalendar*\, Pursuing (Expected May 2026)\\
+B.Tech in Computer Science Core \hfill Current CGPA \textbf{8.85/10}\\[2pt]
+\textbf{Delhi Public School Ranchi}\\[-2pt]
+\begin{itemize}
+  \item Class XII (Senior Secondary) Percentage: \textbf{89.6\%}
+  \item Class X (Secondary) Percentage: \textbf{95\%}
+\end{itemize}
+\textbf{FIITJEE, Ranchi}\\[-2pt]
+Physics, Chemistry, Mathematics, SST, Mathematical/Logical Reasoning (Mental Ability), \& Quantitative Aptitude
+
+% ===================== Skills =====================
+\ressectionplain{TECHNICAL \& DESIGN SKILLS}
+\begin{itemize}
+  \item \textbf{Programming Languages:} C, C++, Java, Python
+  \item \textbf{AI/ML \& Data Science:} TensorFlow, PyTorch, Scikit-learn, OpenCV, Pandas, NumPy, Matplotlib
+  \item \textbf{Web Dev \& DB Management:} HTML, CSS, JavaScript, React, Node.js, MySQL, Mongo, Postgres
+  \item \textbf{Tools, Technologies \& Software:} Git, GitHub, AWS, VSCode, Jupyter Nb, Kubernetes, Docker, Jenkins Excel
+  \item \textbf{Design \& Visualization:} Figma, Canva, Blender (basics)
+  \item \textbf{Soft Skills:} Problem Solving, Team Collaboration (cross-functional), Communication, Leadership, Time Management, Documentation, Risk Management, Agile methodology, Business modelling, AI Prompting
+\end{itemize}
+
+% ===================== Coursework =====================
+\ressectionplain{RELEVANT COURSEWORK}
+OS, DBMS, DSA, DAA, COA, OOP, CN, Compiler Design, Data Mining \& Analytics, SWE Principles, ML \& AI
+
+% ===================== Experience =====================
+\ressection{EXPERIENCE}
+\textbf{POINT-OF-CARE MICROFLUIDICS PRIVATE LIMITED} (July 2025 – on) \hfill VIT Vellore\\
+Onsite SWE intern\\[-3pt]
+{\small\textcolor{black!70}{\textit{Technologies: Full stack Infra Delivery \& IaC Networking Architecture, System Design, ASP .NET Core Razor/Blazor apps, Wsgi.net/Avalonia, Uno) 4.0, CNCF, ClickHouse, AWS, Hybrid .NET MAUI, Kotlin, React, Android Fluidode, Nginx(Envoy), Automation, Containers, Open API, Electron}}}\\[-5pt]
+\begin{itemize}
+  \item Building shippable \textbf{Ecommerce} frictionless experience \textbf{server-oriented web design} for thorough-casing lab-on-chip healthcare products (e.g., microarray patch) with the backend in \textbf{Node + Drogon} behind \textbf{Nginx}
+  \item \textbf{Engineering \& planning dashboards} and \textbf{interactive} resolution independent \textbf{admin portals} for product analytics using \textbf{ASP.NET Core Razor/Blazor}, \textbf{Wisej.NET 4.0}, \textbf{React}, and \textbf{.NET MAUI} with unified C\#/Kotlin code sharing; maintaining \textbf{cross platform} user experiences and dynamic \textbf{device telemetry visualizations}. Integrated \textbf{Kafka (HTTP ingestion)} for live product-event streams, enabling granular product traceability, A/B test analytics, and clinician notifications. Bundled Nginx for \textbf{frontend canary routing}, supporting incremental interface rollouts with \textbf{automated rollback} and traffic shaping
+  \item Designing \textbf{PCI} aware checkout flow with \textbf{tokenized payments} and \textbf{rate limited endpoints}; blocked, on trial basis, bulk of 50-50\% bad threat attempts and \textbf{decreased payment failures} by 50-50\%.
+  \item Inheriting \textbf{blue/green deployments} via intermediation of automated health checks and request hedging at the edge (Nginx + service mesh), enabling \textbf{zero downtime} releases; cut \textbf{rollback time} from 7m to 3m, held \textbf{P95 latency $\leq$250ms} during traffic spikes, and \textbf{reduced error rates} by \textasciitilde10\% across checkout and device-telemetry microservices, which expose \textbf{REST} and \textbf{GraphQL APIs}, \textbf{webhooks} for eventing, and \textbf{SPARQL} endpoints for semantic/metalangauge data queries
+\end{itemize}
+
+\textbf{SCHOLARS MERIT ONLINE PRIVATE LIMITED} (May 2025 - July 2025) \hfill Noida, UP\\
+Onsite UG Intern - Full Stack \textbf{MERN} Development\\[-3pt]
+{\small\textcolor{black!70}{\textit{Technologies: React.js, Node.js, Express.js, MongoDB, Vaadin, LAMP Stack, test suite, YARP}}}\\[-5pt]
+\begin{itemize}
+  \item \textbf{MERN}: developed/maintained (existing) apps for creative UI and in-premises’ needs; provided stewardship with teams on \textbf{responsive UIs} using \textbf{React.js \& Vaadin}; built \textbf{RESTful APIs} and integrated backend services with \textbf{Express.js/Node.js}
+  \item \textbf{DB/quality}: worked with \textbf{DBMS (Mongo, LAMP} stack components); resolved \textbf{2 critical performance bottlenecks}; contributed to \textbf{code reviews} and \textbf{testing} (unit, integration, smoke, component, regression, property-based) and maintained \textbf{version control} using \textbf{Git/GitHub}
+\end{itemize}
+
+\textbf{ETHNUS CODEMITHRA}\\
+MERN Stack Development Intern\\[-3pt]
+{\small\textcolor{black!70}{\textit{Technologies: MongoDB, Express.js, React.js, Node.js, JavaScript, HTML, CSS}}}\\[-5pt]
+\begin{itemize}
+  \item Full-stack \textbf{MERN}: React.js frontend; Node.js/Express.js backend with \textbf{RESTful APIs}; dynamic web apps and server-side logic
+  \item \textbf{Data/AWS}: \textbf{MongoDB} DB ops (assortments and applications), studied Postgres; code reviews \& collaborative dev; gained \textbf{AWS} experience
+\end{itemize}
+
+% ===================== Projects =====================
+\ressection{PROJECTS}
+\textbf{Real-Time Chess Cheat Detection Engine} \hfill \href{https://github.com/akshatsinha0/chess-cheat-detect.git}{https://github.com/akshatsinha0/chess-cheat-detect.git}\\
+{\small\textcolor{black!70}{\textit{Technologies: Python, Stockfish, OpenCV, TensorFlow, Scikit-learn, Selenium, Docker, MySQL, Isolation Forest}}}\\[-5pt]
+\begin{itemize}
+  \item Built a \textbf{real-time} chess anti-cheat imitating Chess.com/Lichess/Fide Online Arena: \textbf{Stockfish (NNUE)} move analysis + \textbf{OpenCV} board detection; \textbf{TensorFlow/Scikit-learn} ML on \textbf{Selenium}-scraped games powering a dynamic warning system
+  \item Scaled with \textbf{Docker} plus \textbf{MySQL} logs; \textbf{98\% accuracy} in move analysis and \textbf{30\% fewer false positives}; codifying an \textbf{online/offline feature store} (session entropy, opening-book adherence, think-time distributions, sandbagging spikes, device/browser fingerprints, network jitter) for cohort-based thresholds by rating pools/time controls (WIP)
+\end{itemize}
+
+\textbf{TakesTakesTakes — Two-Player Chess Game Website} \hfill \href{https://takestakestakes.netlify.app/}{https://takestakestakes.netlify.app/}\\
+{\small\textcolor{black!70}{\textit{Technologies: HTML, CSS, JavaScript, Node.js, WebSockets, MongoDB, Supabase}}}\\[-5pt]
+\begin{itemize}
+  \item Built \textbf{real-time 2P} chess site with \textbf{Chessboard.js}, HTML/CSS/JS, and \textbf{WebSockets}
+  \item Data/auth: \textbf{MongoDB} to \textbf{Supabase}, secure \textbf{user authentication}, game synchronisation, profiles \& game histories
+\end{itemize}
+
+\textbf{FlowDiag: Program or Code Function Visualization Extension} \hfill \href{https://github.com/akshatsinha0/flowdiag.git}{https://github.com/akshatsinha0/flowdiag.git}\\
+{\small\textcolor{black!70}{\textit{Technologies: Javascript}}}\\[-5pt]
+\begin{itemize}
+  \item Architected a \textbf{VS Code extension} (\textbf{TypeScript + Tree-sitter} incremental parsing) to parse JS/TS function ASTs and auto-generate interactive \textbf{Mermaid.js flowcharts}, streamlining code comprehension and documentation workflows
+  \item Implemented \textbf{WASM}-backed, async \textbf{Language.load()} parsing with robust \textbf{error handling}/fallbacks and \textbf{100\% cross-platform} Node.js support; integrated \textbf{VS Code Extension API} (WebView panels, command palette) with context-aware \textbf{AST traversal} for \textbf{control-flow analysis} and diagram generation
+\end{itemize}
+
+\textbf{HereIAm — Real-Time Chat Application} \hfill \href{https://github.com/akshatsinha0/Imp-Here-I-Am.git}{https://github.com/akshatsinha0/Imp-Here-I-Am.git}\\
+{\small\textcolor{black!70}{\textit{Technologies: React, Node.js, Express, WebSockets, MongoDB, JWT}}}\\[-5pt]
+\begin{itemize}
+  \item Created React chat app: \textbf{responsive UI}, fast messaging; \textbf{real-time} private (registered) \& group chats via \textbf{WebSockets}
+  \item Storage/auth: \textbf{MongoDB} to \textbf{Supabase}; \textbf{JWT}-based auth; secure user data plus chat histories
+\end{itemize}
+
+\textbf{HackBattle Website — ARCS Flagship Event (IEEE Computer Society)} \hfill \href{https://arcs.ieeecsvit.com/}{https://arcs.ieeecsvit.com/}\\
+{\small\textcolor{black!70}{\textit{Technologies: React.js, UI/UX Design, Figma}}}\\[-5pt]
+\begin{itemize}
+  \item Assisted \& collaborated with team in frontend dev of the web, contributing to \textbf{UI/UX}, \textbf{responsive}, canvas, nav
+\end{itemize}
+
+\textbf{And? — CHATBOX — AI-Powered Chatbox Interface} \hfill \href{https://github.com/akshatsinha0/And-.git}{https://github.com/akshatsinha0/And-.git}\\
+{\small\textcolor{black!70}{\textit{Technologies: Python, Flask, OpenAI API, Hugging Face Transformers, RAG (Retrieval-Augmented Generation), LangChain, ChromaDB, JavaScript, CSS3}}}\\[-5pt]
+\begin{itemize}
+  \item Built a \textbf{AI chatbot} in \textbf{Flask} with modern NLP, migrating from GPT-3.5 to open-source HF models (Zephyr-7B), implementing \textbf{RAG} via \textbf{LangChain + ChromaDB} and optimizing local LLMs with \textbf{quantization \& LoRA fine-tuning}
+  \item Productionized with secure \textbf{API key management} (python-dotenv), \textbf{rate limiting}, and a UI featuring CSS animations \& glassmorphism (90\%+ Lighthouse accessibility), deployed via GitHub integration and \textbf{CI/CD} pipelines with test
+\end{itemize}
+
+% ===================== Certifications =====================
+\ressection{CERTIFICATIONS}
+\begin{itemize}
+  \item \textbf{Python (Basic)} – Issued by \textbf{HackerRank} \hfill Earned: January 15, 2024
+  \item \textbf{Problem Solving (Basic)} – Issued by \textbf{HackerRank} \hfill Earned: January 15, 2024
+  \item \textbf{Learn Python Like a Professional} – \textbf{Udemy} \hfill Completed: July 2023
+\end{itemize}
+
+% ===================== Awards =====================
+\ressection{AWARDS \& ACHIEVEMENTS}
+\textbf{Winner, Ideathon 2.0 by Pixelate, VIT Vellore (March 2025)}\\
+Led \textbf{Team Rudiment} to secure \textbf{1st place} in Pixelate’s Ideathon 2.0 with the project \textit{Authentica}, a \textbf{blockchain-powered} platform for protecting \textbf{digital content ownership}. Demonstrated \textbf{innovative problem-solving} and \textbf{teamwork} to address challenges in \textbf{content security} and \textbf{AI-driven replication}.
+
+\end{document}
