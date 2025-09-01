@@ -1,0 +1,29 @@
+Starting a Gradle Daemon, 1 stopped Daemon could not be reused, use --status for details
+> Task :compileJava UP-TO-DATE
+> Task :processResources UP-TO-DATE
+> Task :classes UP-TO-DATE
+> Task :resolveMainClassName UP-TO-DATE
+
+> Task :bootRun
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.4.0)
+
+2025-09-01T20:35:52.132+05:30  INFO 16964 --- [JavaOnEC2] [           main] c.e.javaonec2.JavaOnEc2Application       : Starting JavaOnEc2Application using Java 24.0.2 with PID 16964 (C:\Users\Akshat Sinha\Downloads\CLOUD COMPUTING\JavaOnEC2\build\classes\java\main started by Akshat Sinha in C:\Users\Akshat Sinha\Downloads\CLOUD COMPUTING\JavaOnEC2)
+2025-09-01T20:35:52.134+05:30  INFO 16964 --- [JavaOnEC2] [           main] c.e.javaonec2.JavaOnEc2Application       : No active profile set, falling back to 1 default profile: "default"
+2025-09-01T20:35:52.721+05:30  INFO 16964 --- [JavaOnEC2] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-09-01T20:35:52.731+05:30  INFO 16964 --- [JavaOnEC2] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-09-01T20:35:52.731+05:30  INFO 16964 --- [JavaOnEC2] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.33]
+2025-09-01T20:35:52.767+05:30  INFO 16964 --- [JavaOnEC2] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-09-01T20:35:52.768+05:30  INFO 16964 --- [JavaOnEC2] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 592 ms
+2025-09-01T20:35:52.991+05:30  INFO 16964 --- [JavaOnEC2] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-09-01T20:35:52.995+05:30  INFO 16964 --- [JavaOnEC2] [           main] c.e.javaonec2.JavaOnEc2Application       : Started JavaOnEc2Application in 1.14 seconds (process running for 1.363)
+2025-09-01T20:37:11.997+05:30  INFO 16964 --- [JavaOnEC2] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-09-01T20:37:11.997+05:30  INFO 16964 --- [JavaOnEC2] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-09-01T20:37:11.998+05:30  INFO 16964 --- [JavaOnEC2] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
