@@ -1,0 +1,18 @@
+version: 0.0
+os: linux
+files:
+  - source: app.jar
+    destination: /opt/app
+hooks:
+  ApplicationStop:
+    - location: scripts/stop.sh
+      timeout: 60
+  BeforeInstall:
+    - location: scripts/preinstall.sh
+      timeout: 60
+  ApplicationStart:
+    - location: scripts/start.sh
+      timeout: 120
+  ValidateService:
+    - location: scripts/validate.sh
+      timeout: 180

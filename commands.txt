@@ -1,0 +1,386 @@
+# ============================================================================
+# Cloud Computing Project - PowerShell Runbook (AWS CLI + Docker builds)
+# Author: Akshat Sinha
+# Shell: PowerShell 7 (pwsh)
+# Region: us-east-1
+# This file is copy/paste friendly. Run each block top-to-bottom.
+# ============================================================================
+
+# ----------------------------------------
+# 0) PREREQS (one-time)
+# ----------------------------------------
+# Install AWS CLI v2 (Windows)
+winget install --id Amazon.AWSCLI -e
+# Verify
+aws --version
+
+# Ensure Docker Desktop is running (required for dockerized Maven and zip)
+# No command here—start it from the Start menu. Verify:
+docker --version
+
+# ----------------------------------------
+# 1) AWS SESSION & BASICS
+# ----------------------------------------
+# Set your CLI profile and region for this demo
+$env:AWS_PROFILE = "java-ec2"
+$env:AWS_REGION  = "us-east-1"
+
+# Who am I? (confirms credentials)
+aws sts get-caller-identity --output json --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# Compute a globally-unique S3 artifact bucket name from your account+region
+$acct = (aws sts get-caller-identity --query Account --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$env:S3_BUCKET = ("java-ec2-artifacts-{0}-{1}" -f $acct, $env:AWS_REGION).ToLower()
+$env:S3_BUCKET
+
+# ----------------------------------------
+# 2) CREATE/SECURE THE ARTIFACT BUCKET (idempotent)
+# ----------------------------------------
+# Try to create it (special case for us-east-1). Ignore error if it exists.
+try {
+  if ($env:AWS_REGION -eq "us-east-1") {
+    aws s3api create-bucket --bucket $env:S3_BUCKET --region $env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
+  } else {
+    aws s3api create-bucket --bucket $env:S3_BUCKET --region $env:AWS_REGION --create-bucket-configuration LocationConstraint=$env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
+  }
+} catch { Write-Host "Bucket may already exist—continuing" }
+
+# Enable versioning, block public access, enable SSE-S3 encryption
+aws s3api put-bucket-versioning --bucket $env:S3_BUCKET --versioning-configuration Status=Enabled --profile $env:AWS_PROFILE
+aws s3api put-public-access-block --bucket $env:S3_BUCKET --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true --profile $env:AWS_PROFILE
+aws s3api put-bucket-encryption --bucket $env:S3_BUCKET --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}' --profile $env:AWS_PROFILE
+
+# Verify bucket settings
+aws s3api get-bucket-location   --bucket $env:S3_BUCKET --profile $env:AWS_PROFILE
+aws s3api get-bucket-versioning --bucket $env:S3_BUCKET --profile $env:AWS_PROFILE
+aws s3api get-public-access-block --bucket $env:S3_BUCKET --profile $env:AWS_PROFILE
+
+# ----------------------------------------
+# 3) BUILD THE SPRING BOOT JAR (Dockerized Maven, Java 17)
+# ----------------------------------------
+# Location: C:\Users\Akshat Sinha\Downloads\CLOUD COMPUTING\JavaOnEC2 (project root)
+$proj      = (Get-Location).Path
+$projUnix  = $proj -replace '^([A-Za-z]):','/$1' -replace '\\','/'
+$mountProj = "${projUnix}:/app"
+# Build fat jar
+docker run --rm -v $mountProj -w /app maven:3.9-eclipse-temurin-17 mvn -q -DskipTests package
+# Copy jar to app.jar (packaging convenience)
+Copy-Item -Force .\target\javaonec2-0.0.1-SNAPSHOT.jar .\app.jar
+
+# ----------------------------------------
+# 4) CREATE CODEDEPLOY APP BUNDLE (appspec + scripts)
+# ----------------------------------------
+# appspec.yml (Linux) with generous timeouts
+@'
+version: 0.0
+os: linux
+files:
+  - source: app.jar
+    destination: /opt/app
+  - source: app.env
+    destination: /opt/app
+hooks:
+  ApplicationStop:
+    - location: scripts/stop.sh
+      timeout: 60
+  BeforeInstall:
+    - location: scripts/preinstall.sh
+      timeout: 60
+  ApplicationStart:
+    - location: scripts/start.sh
+      timeout: 120
+  ValidateService:
+    - location: scripts/validate.sh
+      timeout: 180
+'@ | Set-Content -NoNewline appspec.yml
+
+# scripts/preinstall.sh – ensure executable bits
+@'
+#!/bin/bash
+set -euo pipefail
+chmod +x /opt/codedeploy-agent/deployment-root/*/*/deployment-archive/scripts/*.sh || true
+'@ | Set-Content -NoNewline -Encoding ascii scripts/preinstall.sh
+
+# scripts/stop.sh – stop systemd service if present
+@'
+#!/bin/bash
+set -euo pipefail
+sudo systemctl stop app || true
+'@ | Set-Content -NoNewline -Encoding ascii scripts/stop.sh
+
+# scripts/start.sh – systemd unit with CAP_NET_BIND_SERVICE + readiness wait + APP_VERSION env
+@'
+#!/bin/bash
+set -euo pipefail
+sudo chown -R app:app /opt/app
+# default version if not provided
+if [ ! -f /opt/app/app.env ]; then echo "APP_VERSION=v1" | sudo tee /opt/app/app.env >/dev/null; fi
+sudo bash -c 'cat >/etc/systemd/system/app.service <<EOF
+[Unit]
+Description=Spring Boot App
+After=network.target
+
+[Service]
+User=app
+WorkingDirectory=/opt/app
+EnvironmentFile=/opt/app/app.env
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ExecStart=/usr/bin/java -Dserver.port=80 -jar /opt/app/app.jar
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF'
+
+sudo systemctl daemon-reload
+sudo systemctl enable app
+sudo systemctl restart app
+
+# Readiness loop (~180s)
+for i in $(seq 1 90); do
+  if wget -qO- http://localhost/health >/dev/null 2>&1; then
+    exit 0
+  fi
+  sleep 2
+done
+journalctl -u app -n 60 --no-pager || true
+exit 1
+'@ | Set-Content -NoNewline -Encoding ascii scripts/start.sh
+
+# scripts/validate.sh – retry to confirm service is up, logs on failure
+@'
+#!/bin/bash
+set -euo pipefail
+for i in $(seq 1 90); do
+  if wget -qO- http://localhost/health >/dev/null 2>&1; then
+    exit 0
+  fi
+  sleep 2
+done
+journalctl -u app -n 60 --no-pager || true
+echo "health check timeout" >&2
+exit 1
+'@ | Set-Content -NoNewline -Encoding ascii scripts/validate.sh
+
+# app.env – version banner (v1 for baseline)
+"APP_VERSION=v1" | Set-Content -NoNewline app.env
+
+# ----------------------------------------
+# 5) PACKAGE THE BUNDLE USING LINUX ZIP (avoids Windows path quirks)
+# ----------------------------------------
+Remove-Item -Recurse -Force bundle -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force bundle | Out-Null
+Copy-Item -Force app.jar,appspec.yml,app.env bundle\
+Copy-Item -Recurse -Force scripts bundle\
+$mountZip = "${projUnix}:/work"
+docker run --rm -v $mountZip -w /work alpine:3.20 sh -lc "apk add --no-cache zip >/dev/null && cd bundle && zip -qr ../java-service-v1.zip ."
+
+# ----------------------------------------
+# 6) UPLOAD ARTIFACT AND BUILD REVISION JSON
+# ----------------------------------------
+aws s3 cp .\java-service-v1.zip "s3://$env:S3_BUCKET/java-service/v1.zip" --region $env:AWS_REGION --profile $env:AWS_PROFILE
+$BUCKET = $env:S3_BUCKET
+$KEY    = "java-service/v1.zip"
+$VERID  = (aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "Versions[?Key=='$KEY']|[0].VersionId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$JSON   = '{"revisionType":"S3","s3Location":{"bucket":"'+$BUCKET+'","key":"'+$KEY+'","bundleType":"zip","version":"'+$VERID+'"}}'
+Set-Content -NoNewline revision.json -Value $JSON
+Get-Content revision.json
+
+# ----------------------------------------
+# 7) CREATE THE STACK (IaC) – self-contained VPC + EC2 + CodeDeploy + Budget
+# ----------------------------------------
+# Writes infra.yaml (idempotent)
+@'
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Java Service on EC2 via IaC (EC2, IAM, SG, CodeDeploy, budget)
+Parameters:
+  ProjectName: { Type: String, Default: JavaService }
+  Environment: { Type: String, Default: dev }
+  ArtifactBucketName: { Type: String, Description: S3 artifact bucket }
+  AppPort: { Type: Number, Default: 80 }
+  InstanceType: { Type: String, Default: t2.micro }
+  BudgetAmount: { Type: Number, Default: 5 }
+  LatestAmiId: { Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>', Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64 }
+Resources:
+  Vpc: { Type: AWS::EC2::VPC, Properties: { CidrBlock: 10.0.0.0/24, EnableDnsHostnames: true, EnableDnsSupport: true } }
+  InternetGateway: { Type: AWS::EC2::InternetGateway }
+  VpcIgwAttachment: { Type: AWS::EC2::VPCGatewayAttachment, Properties: { VpcId: !Ref Vpc, InternetGatewayId: !Ref InternetGateway } }
+  PublicSubnet: { Type: AWS::EC2::Subnet, Properties: { VpcId: !Ref Vpc, CidrBlock: 10.0.0.0/25, MapPublicIpOnLaunch: true, AvailabilityZone: !Select [0, !GetAZs ''] } }
+  PublicRouteTable: { Type: AWS::EC2::RouteTable, Properties: { VpcId: !Ref Vpc } }
+  PublicRoute: { Type: AWS::EC2::Route, DependsOn: VpcIgwAttachment, Properties: { RouteTableId: !Ref PublicRouteTable, DestinationCidrBlock: 0.0.0.0/0, GatewayId: !Ref InternetGateway } }
+  PublicSubnetRouteTableAssociation: { Type: AWS::EC2::SubnetRouteTableAssociation, Properties: { SubnetId: !Ref PublicSubnet, RouteTableId: !Ref PublicRouteTable } }
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [ { Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: sts:AssumeRole } ]
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: S3ArtifactRead
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [ s3:GetObject, s3:GetObjectVersion, s3:ListBucket, s3:GetBucketLocation ]
+                Resource: [ !Sub 'arn:aws:s3:::${ArtifactBucketName}', !Sub 'arn:aws:s3:::${ArtifactBucketName}/*' ]
+  InstanceProfile: { Type: AWS::IAM::InstanceProfile, Properties: { Roles: [ !Ref InstanceRole ] } }
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP only
+      VpcId: !Ref Vpc
+      SecurityGroupIngress: [ { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0 } ]
+      SecurityGroupEgress:  [ { IpProtocol: -1, CidrIp: 0.0.0.0/0 } ]
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref LatestAmiId
+      MetadataOptions: { HttpTokens: required, HttpEndpoint: enabled }
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [ !Ref SecurityGroup ]
+      Tags:
+        - { Key: Name, Value: !Sub '${ProjectName}-${Environment}-ec2' }
+        - { Key: App,  Value: JavaService }
+      UserData: !Base64 |
+        #!/bin/bash
+        set -euxo pipefail
+        dnf -y update
+        dnf -y install java-17-amazon-corretto-headless wget ruby
+        systemctl enable amazon-ssm-agent || true
+        systemctl start amazon-ssm-agent || true
+        cd /tmp
+        if wget -q https://aws-codedeploy-${AWS::Region}.s3.${AWS::Region}.amazonaws.com/latest/install; then chmod +x ./install; ./install auto; else wget -q https://aws-codedeploy-${AWS::Region}.s3.amazonaws.com/latest/install; chmod +x ./install; ./install auto; fi
+        systemctl enable codedeploy-agent || true
+        systemctl start codedeploy-agent || true
+        useradd --system --home /opt/app --shell /sbin/nologin app || true
+        mkdir -p /opt/app /var/log/app
+        chown -R app:app /opt/app /var/log/app
+  CodeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement: [ { Effect: Allow, Principal: { Service: codedeploy.amazonaws.com }, Action: sts:AssumeRole } ]
+      ManagedPolicyArns: [ arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole ]
+  CodeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties: { ApplicationName: !Sub '${ProjectName}-${Environment}-app', ComputePlatform: Server }
+  CodeDeployDeploymentGroup:
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties:
+      ApplicationName: !Ref CodeDeployApplication
+      DeploymentGroupName: !Sub '${ProjectName}-${Environment}-dg'
+      ServiceRoleArn: !GetAtt CodeDeployServiceRole.Arn
+      DeploymentConfigName: CodeDeployDefault.AllAtOnce
+      Ec2TagFilters: [ { Key: App, Value: JavaService, Type: KEY_AND_VALUE } ]
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetLimit: { Amount: !Ref BudgetAmount, Unit: USD }
+        BudgetName: !Sub '${ProjectName}-${Environment}-budget'
+        BudgetType: COST
+        TimeUnit: MONTHLY
+      NotificationsWithSubscribers:
+        - Notification: { ComparisonOperator: GREATER_THAN, NotificationType: ACTUAL, Threshold: 100, ThresholdType: PERCENTAGE }
+          Subscribers: [ { SubscriptionType: EMAIL, Address: akshatsinhasramhardy@gmail.com } ]
+Outputs:
+  InstanceId: { Value: !Ref EC2Instance }
+  PublicIp:   { Value: !GetAtt EC2Instance.PublicIp }
+  CodeDeployApplicationName: { Value: !Ref CodeDeployApplication }
+  DeploymentGroupName:       { Value: !Ref CodeDeployDeploymentGroup }
+'@ | Set-Content -NoNewline infra.yaml
+
+# Deploy the stack
+aws cloudformation deploy --stack-name "JavaService-dev" --template-file infra.yaml --capabilities CAPABILITY_NAMED_IAM --parameter-overrides ProjectName=JavaService Environment=dev ArtifactBucketName=$env:S3_BUCKET AppPort=80 InstanceType=t2.micro BudgetAmount=5 --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# ----------------------------------------
+# 8) (OPTIONAL) SSM PREFLIGHT – prove instance can read S3
+# ----------------------------------------
+$IID=(aws ec2 describe-instances --filters "Name=tag:App,Values=JavaService" "Name=instance-state-name,Values=running" --query "Reservations[0].Instances[0].InstanceId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$CMDID = aws ssm send-command --instance-ids $IID --document-name "AWS-RunShellScript" --parameters commands='["aws s3 cp s3://'$env:S3_BUCKET'/java-service/v1.zip /tmp/app.zip && echo OK"]' --query "Command.CommandId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+aws ssm get-command-invocation --command-id $CMDID --instance-id $IID --query "StandardOutputContent" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# ----------------------------------------
+# 9) ENABLE AUTO-ROLLBACK ON DEPLOYMENT FAILURE (once)
+# ----------------------------------------
+aws deploy update-deployment-group --application-name JavaService-dev-app --current-deployment-group-name JavaService-dev-dg --auto-rollback-configuration enabled=true,events=DEPLOYMENT_FAILURE --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# ----------------------------------------
+# 10) CREATE DEPLOYMENT (v1 baseline)
+# ----------------------------------------
+$DEPLOY_ID = aws deploy create-deployment --application-name JavaService-dev-app --deployment-group-name JavaService-dev-dg --revision file://revision.json --region $env:AWS_REGION --profile $env:AWS_PROFILE --query deploymentId --output text
+aws deploy wait deployment-successful --deployment-id $DEPLOY_ID --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# Verify from your machine
+$IP=(aws ec2 describe-instances --instance-ids $IID --query "Reservations[0].Instances[0].PublicIpAddress" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+Invoke-WebRequest -UseBasicParsing "http://$IP/health" | Select-Object StatusCode
+Invoke-WebRequest -UseBasicParsing "http://$IP/version" | Select-Object StatusCode,Content
+
+# ----------------------------------------
+# 11) S2 – NORMAL UPDATE TO v2
+# ----------------------------------------
+Remove-Item -Recurse -Force bundle -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force bundle | Out-Null
+Copy-Item -Force app.jar,appspec.yml bundle\
+Copy-Item -Recurse -Force scripts bundle\
+"APP_VERSION=v2" | Set-Content -NoNewline bundle\app.env
+$mountZip = "${projUnix}:/work"
+docker run --rm -v $mountZip -w /work alpine:3.20 sh -lc "apk add --no-cache zip >/dev/null && cd bundle && zip -qr ../java-service-v2.zip ."
+aws s3 cp .\java-service-v2.zip "s3://$env:S3_BUCKET/java-service/v2.zip" --region $env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
+$KEY="java-service/v2.zip"; $VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "Versions[?Key=='$KEY']|[0].VersionId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$JSON = '{"revisionType":"S3","s3Location":{"bucket":"'+$BUCKET+'","key":"'+$KEY+'","bundleType":"zip","version":"'+$VERID+'"}}'
+Set-Content -NoNewline revision.json -Value $JSON
+$DEPLOY_ID = aws deploy create-deployment --application-name JavaService-dev-app --deployment-group-name JavaService-dev-dg --revision file://revision.json --region $env:AWS_REGION --profile $env:AWS_PROFILE --query deploymentId --output text
+aws deploy wait deployment-successful --deployment-id $DEPLOY_ID --region $env:AWS_REGION --profile $env:AWS_PROFILE
+Invoke-WebRequest -UseBasicParsing "http://$IP/version" | Select-Object StatusCode,Content
+
+# ----------------------------------------
+# 12) S3 – FAILURE INJECTION & AUTO-ROLLBACK (create bad v3)
+# ----------------------------------------
+# Overwrite validate.sh to fail and package v3 (bad)
+@'#!/bin/bash
+exit 1
+'@ | Set-Content -NoNewline -Encoding ascii scripts/validate.sh
+Remove-Item -Recurse -Force bundle -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force bundle | Out-Null
+Copy-Item -Force app.jar,appspec.yml bundle\
+Copy-Item -Recurse -Force scripts bundle\
+docker run --rm -v $mountZip -w /work alpine:3.20 sh -lc "apk add --no-cache zip >/dev/null && cd bundle && zip -qr ../java-service-v3-bad.zip ."
+aws s3 cp .\java-service-v3-bad.zip "s3://$env:S3_BUCKET/java-service/v3.zip" --region $env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
+$KEY="java-service/v3.zip"; $VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "Versions[?Key=='$KEY']|[0].VersionId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$JSON = '{"revisionType":"S3","s3Location":{"bucket":"'+$BUCKET+'","key":"'+$KEY+'","bundleType":"zip","version":"'+$VERID+'"}}'
+Set-Content -NoNewline revision.json -Value $JSON
+$DEPLOY_ID = aws deploy create-deployment --application-name JavaService-dev-app --deployment-group-name JavaService-dev-dg --revision file://revision.json --region $env:AWS_REGION --profile $env:AWS_PROFILE --query deploymentId --output text
+# Expect failure and auto-rollback
+aws deploy wait deployment-failed --deployment-id $DEPLOY_ID --region $env:AWS_REGION --profile $env:AWS_PROFILE
+# Verify rollback kept the previous working version
+Invoke-WebRequest -UseBasicParsing "http://$IP/version" | Select-Object StatusCode,Content
+
+# ----------------------------------------
+# 13) OPTIONAL OPS COMMANDS (SSM diagnostics)
+# ----------------------------------------
+# Systemd status (top lines)
+$CMDID = aws ssm send-command --instance-ids $IID --document-name "AWS-RunShellScript" --parameters commands='["LANG=C sudo systemctl status --no-pager app | sed -n 1,20p"]' --query "Command.CommandId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+aws ssm get-command-invocation --command-id $CMDID --instance-id $IID --query "StandardOutputContent" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+# Recent logs
+$CMDID = aws ssm send-command --instance-ids $IID --document-name "AWS-RunShellScript" --parameters commands='["sudo journalctl -u app -n 60 --no-pager"]' --query "Command.CommandId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+aws ssm get-command-invocation --command-id $CMDID --instance-id $IID --query "StandardOutputContent" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
+
+# ----------------------------------------
+# 14) CLEANUP
+# ----------------------------------------
+# Delete the stack (removes EC2, VPC, IAM, CodeDeploy, Budget)
+aws cloudformation delete-stack --stack-name JavaService-dev --region $env:AWS_REGION --profile $env:AWS_PROFILE
+aws cloudformation wait stack-delete-complete --stack-name JavaService-dev --region $env:AWS_REGION --profile $env:AWS_PROFILE
+# Optionally remove artifacts to stop S3 charges (choose one):
+# aws s3 rm "s3://$env:S3_BUCKET/java-service/" --recursive --region $env:AWS_REGION --profile $env:AWS_PROFILE
+# aws s3 rm "s3://$env:S3_BUCKET" --recursive --region $env:AWS_REGION --profile $env:AWS_PROFILE
+# aws s3api delete-bucket --bucket $env:S3_BUCKET --region $env:AWS_REGION --profile $env:AWS_PROFILE
