@@ -1,0 +1,24 @@
+Project Version Information
+==========================
+
+Java Version: 24.0.2
+Spring Boot Version: 3.4.0
+Gradle Version: 8.14.3
+Spring Dependency Management Plugin: 1.1.6
+
+Project Details:
+- Group: com.example
+- Artifact: JavaOnEC2
+- Version: 0.0.1-SNAPSHOT
+- Description: Demo project for Spring Boot
+
+Dependencies:
+- Spring Boot Starter Web
+- Spring Boot Starter Test
+- JUnit Platform Launcher
+
+Build Tool: Gradle with Wrapper
+Java Toolchain: Java 24
+Repository: Maven Central
+
+Generated on: January 9, 2025
