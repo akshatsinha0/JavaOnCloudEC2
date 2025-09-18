@@ -1,0 +1,21 @@
+# Specific files to ignore
+JavaOnEC2.pdf
+main.tex
+
+# LaTeX files
+*.tex
+
+# PDF files
+*.pdf
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
