@@ -1,4 +1,11 @@
 # JavaOnEC2 - v1 Deployment Runbook (PowerShell)
+Rather run this to run whole at once:
+FOR V1:
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\v1Whole-Run.ps1
+```
+FOR V2:
+
 
 Run these commands one-by-one in VS Code Terminal (pwsh). Assumes AWS CLI v2 and Docker Desktop are installed.
 

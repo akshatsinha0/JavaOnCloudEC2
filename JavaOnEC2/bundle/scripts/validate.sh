@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# FAIL_DEMO: uncomment next line to intentionally fail this validation step
+# exit 1
 for i in $(seq 1 90); do
   if wget -qO- http://localhost/health >/dev/null 2>&1; then
     exit 0

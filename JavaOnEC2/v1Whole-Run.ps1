@@ -1,0 +1,1 @@
+$ErrorActionPreference='Stop';$PSNativeCommandUseErrorActionPreference=$true;& (Join-Path $PSScriptRoot 'v1DeploymentSet.ps1')
