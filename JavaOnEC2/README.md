@@ -101,3 +101,9 @@ Invoke-WebRequest -UseBasicParsing "http://$IP/version" | Select-Object StatusCo
 aws cloudformation delete-stack --stack-name JavaService-dev --region $env:AWS_REGION --profile $env:AWS_PROFILE
 aws cloudformation wait stack-delete-complete --stack-name JavaService-dev --region $env:AWS_REGION --profile $env:AWS_PROFILE
 ```
+
+
+
+To check how many versions exist in s3?
+```pwsh
+$rev = Get-Content .\revision.json | ConvertFrom-Json; $BUCKET=$rev.s3Location.bucket; $KEY=$rev.s3Location.key; aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "length(Versions)" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE
