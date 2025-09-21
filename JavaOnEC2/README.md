@@ -5,6 +5,9 @@ FOR V1:
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\v1Whole-Run.ps1
 ```
 FOR V2:
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\v2Whole-Run.ps1
+```
 
 
 Run these commands one-by-one in VS Code Terminal (pwsh). Assumes AWS CLI v2 and Docker Desktop are installed.
