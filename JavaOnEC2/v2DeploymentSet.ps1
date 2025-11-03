@@ -74,7 +74,7 @@ New-ZipWithProgress -SourceDir $bundleDir -ZipPath (Join-Path (Get-Location).Pat
 Say "Step 5: upload v2 and write revision.json"
 aws s3 cp .\java-service-v2.zip "s3://$env:S3_BUCKET/java-service/v2.zip" --region $env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
 $BUCKET=$env:S3_BUCKET; $KEY='java-service/v2.zip'
-$VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "Versions[?Key=='$KEY']|[0].VersionId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query 'Versions[0].VersionId' --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
 $JSON='{"revisionType":"S3","s3Location":{"bucket":"'+$BUCKET+'","key":"'+$KEY+'","bundleType":"zip","version":"'+$VERID+'"}}'
 Set-Content -NoNewline revision.json -Value $JSON
 Get-Content revision.json | Write-Host

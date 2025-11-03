@@ -97,7 +97,7 @@ try{
 }catch{Write-Host 'Bucket may already exist—continuing'}
 aws s3api put-bucket-versioning --bucket $env:S3_BUCKET --versioning-configuration Status=Enabled --profile $env:AWS_PROFILE
 aws s3api put-public-access-block --bucket $env:S3_BUCKET --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true --profile $env:AWS_PROFILE
-aws s3api put-bucket-encryption --bucket $env:S3_BUCKET --server-side-encryption-configuration '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}' --profile $env:AWS_PROFILE
+aws s3api put-bucket-encryption --bucket $env:S3_BUCKET --server-side-encryption-configuration '{\"Rules\":[{\"ApplyServerSideEncryptionByDefault\":{\"SSEAlgorithm\":\"AES256\"}}]}' --profile $env:AWS_PROFILE
 
 Say "Step 4: build jar (Dockerized Maven)"
 $proj=(Get-Location).Path
@@ -119,7 +119,7 @@ New-ZipWithProgress -SourceDir $bundleDir -ZipPath (Join-Path (Get-Location).Pat
 Say "Step 6: upload artifact and record VersionId"
 aws s3 cp .\java-service-v1.zip "s3://$env:S3_BUCKET/java-service/v1.zip" --region $env:AWS_REGION --profile $env:AWS_PROFILE | Out-Null
 $BUCKET=$env:S3_BUCKET; $KEY='java-service/v1.zip'
-$VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query "Versions[?Key=='$KEY']|[0].VersionId" --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
+$VERID=(aws s3api list-object-versions --bucket $BUCKET --prefix $KEY --query 'Versions[0].VersionId' --output text --region $env:AWS_REGION --profile $env:AWS_PROFILE).Trim()
 $JSON='{"revisionType":"S3","s3Location":{"bucket":"'+$BUCKET+'","key":"'+$KEY+'","bundleType":"zip","version":"'+$VERID+'"}}'
 Set-Content -NoNewline revision.json -Value $JSON
 Get-Content revision.json | Write-Host
